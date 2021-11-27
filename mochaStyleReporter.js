@@ -33,6 +33,7 @@ const colour = {
 }
 
 // sometimes suites are spread over several files, hence we collect them before generating the report
+// WARNING: in case of duplicates only one will be seen without a warning that there were duplicates
 let allSuitesAndTests, numPassedTests, numFailedTests, numSkippedTests, totalDuration
 
 function collectSuitesAndTests(sessions) {
@@ -83,6 +84,23 @@ function reportAllSuitesAndTests(suiteInfo, indent = "") {
     })
 }
 
+function reportFailedTests(suiteInfo, path = "") {
+    suiteInfo.allTests.forEach((test, name) => {
+        if (test.error) {
+            console.log(`  ${colour.red}∙ ${path} > ${name}${colour.reset}`)
+            console.log(`    ${test.error.name}: ${test.error.message}`)
+            console.log(`    ${colour.boldWhite}Expected:${colour.green} ${test.error.expected}${colour.reset}`)
+            console.log(`    ${colour.boldWhite}Actual  :${colour.red} ${test.error.actual}${colour.reset}`)
+            const stack = test.error.stack.trim().replace(/\n/g, "\n    ")
+            console.log(`    ${stack}`)
+            console.log()
+        }
+    })
+    suiteInfo.allSuites.forEach((childSuiteInfo, name) => {
+        reportFailedTests(childSuiteInfo, path.length === 0 ? name : `${path} > ${name}`)
+    })
+}
+
 function getStatus(status, title = "") {
     switch (status) {
         case 'passed':
@@ -128,25 +146,22 @@ module.exports = function mochaStyleReporter({
         },
 
         /**
-         * Called once when the test runner stops. This can be used to write a test
-         * report to disk for regular test runs.
-         */
-        stop({ sessions, testCoverage, focusedTestFile }) {
-            console.log()
-            console.log(`${colour.boldWhite}${colour.underline}STOP:${colour.reset}`)
-            console.log()
-        },
-
-        /**
-         * Called when a test run starts. Each file change in watch mode
-         * triggers a test run.
-         *
-         * @param testRun the test run
+         * Called when a test is re-run in watch mode.
          */
         onTestRunStarted({ testRun }) {
             console.log()
             console.log(`${colour.boldWhite}${colour.underline}START:${colour.reset}`)
             console.log()
+        },
+
+        /**
+         * Called once when the test runner stops. This can be used to write a test
+         * report to disk for regular test runs.
+         */
+        stop({ sessions, testCoverage, focusedTestFile }) {
+            // console.log()
+            // console.log(`${colour.boldWhite}${colour.underline}STOP:${colour.reset}`)
+            // console.log()
         },
 
         /**
@@ -189,17 +204,20 @@ module.exports = function mochaStyleReporter({
             }
             console.log()
 
-            // console.log(testRun)
-            // console.log(sessions)
-            // console.log(testCoverage)
-            // console.log(focusedTestFile)
+            if (numFailedTests !== 0) {
+                console.log(`${colour.boldWhite}${colour.underline}FAILED TESTS:${colour.reset}`)
+                console.log()
+                reportFailedTests(allSuitesAndTests)
+                console.log()
+            }
 
             if (testCoverage?.summary) {
-                console.log(`SUMMARY:`)
+                console.log(`${colour.boldWhite}${colour.underline}COVERAGE:${colour.reset}`)
                 if (testCoverage?.summary?.branchesTrue?.pct === 'Unknown') {
                     delete testCoverage.summary.branchesTrue
                 }
                 console.table(testCoverage.summary)
+                console.log()
             }
         },
 

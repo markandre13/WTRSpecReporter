@@ -8,6 +8,14 @@ function sleep(milliseconds: number = 500) {
     })
 }
 
+function a() {
+    b()
+}
+
+function b() {
+    expect(true).to.be.false
+}
+
 describe("java or mocha", function() {
     it("don't be chai", function() {
         expect(true).to.be.true
@@ -22,6 +30,6 @@ describe("java or mocha", function() {
         await sleep(80)
     })
     xit("cobol is like java", function() {
-        expect(true).to.be.false
+        a()
     })
 })
