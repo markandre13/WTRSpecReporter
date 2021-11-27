@@ -5,6 +5,9 @@ describe("java or mocha", function() {
         expect(true).to.be.true
     })
     it("javascript is not java", function() {
+        expect(true).to.be.false
     })
-
+    xit("cobol like java", function() {
+        expect(true).to.be.false
+    })
 })
