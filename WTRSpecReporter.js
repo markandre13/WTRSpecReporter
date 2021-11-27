@@ -135,7 +135,7 @@ function testDuration() {
     return `${seconds}.${millis} secs`
 }
 
-module.exports = function mochaStyleReporter({
+module.exports = function WTRSpecReporter({
     reportResults = true,
     reportProgress = true,
 } = {}) {

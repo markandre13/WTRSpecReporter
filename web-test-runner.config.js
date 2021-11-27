@@ -1,14 +1,9 @@
 process.env.NODE_ENV = 'test';
-const { esbuildPlugin } = require('@web/dev-server-esbuild')
-const {defaultReporter} = require('@web/test-runner');
-const specReporter = require('./spec-reporter.js');
-const mochaStyleReporter = require('./mochaStyleReporter.js');
+const WTRSpecReporter = require('./WTRSpecReporter.js');
 
 module.exports = {
-    // plugins: [esbuildPlugin({ ts: true, target: 'esnext' })],
   plugins: [require('@snowpack/web-test-runner-plugin')()],
   reporters: [
-    // defaultReporter({ reportTestResults: true, reportTestProgress: true }),
-    mochaStyleReporter(),
+    WTRSpecReporter({ reportTestResults: true, reportTestProgress: true }),
   ],
 };
