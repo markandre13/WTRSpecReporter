@@ -1,5 +1,13 @@
 import { expect } from '@esm-bundle/chai'
 
+function sleep(milliseconds: number = 500) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            resolve('success')
+        }, milliseconds)
+    })
+}
+
 describe("java or mocha", function() {
     it("don't be chai", function() {
         expect(true).to.be.true
@@ -7,7 +15,13 @@ describe("java or mocha", function() {
     it("javascript is not java", function() {
         expect(true).to.be.false
     })
-    xit("cobol like java", function() {
+    it("tape is slow", async function() {
+        await sleep(40)
+    })
+    it("punchcards are slower", async function() {
+        await sleep(80)
+    })
+    xit("cobol is like java", function() {
         expect(true).to.be.false
     })
 })

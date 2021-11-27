@@ -1,3 +1,5 @@
+const slow = 75;
+
 // ANSI Escape Sequences
 const colour = {
     reset: '\x1b[0m',
@@ -30,81 +32,15 @@ const colour = {
     BrightBlue: '\x1b[94m',
 }
 
-function outputSuite(suite, indent = '') {
-    let results = `${colour.BrightBlue}${suite.name}\n`
-    results += `${suite.tests
-        .map(test => {
-            let result = indent
-            switch (test instanceof Object) {
-                case test.skipped:
-                    result += `${colour.grey} - ${test.name}`
-                    break
-                case test.passed:
-                    result += `${colour.green} ✓ ${colour.reset}${colour.bright}${test.name}`
-                    break
-                default:
-                    result += `${colour.red} ✕ ${test.name}`
-                    break
-            }
-            switch (test instanceof Object) {
-                case test.duration > 100:
-                    result += ` ${colour.reset}${colour.red}(${test.duration}ms)`
-                    break
-                case test.duration > 50:
-                    result += ` ${colour.reset}${colour.yellow}(${test.duration}ms)`
-                    break
-                default:
-                    result += ``
-                    break
-            }
-            result += `${colour.reset}`
-            return result
-        })
-        .join('\n')}\n`
-
-    if (suite.suites) {
-        results += suite.suites
-            .map(suiteIn => outputSuite(suiteIn, `${indent}`))
-            .join('\n')
-    }
-    return results
-}
-
-async function generateTestReport(testFile, sessionsForTestFile) {
-    let results = ''
-    sessionsForTestFile.forEach(session => {
-        results += session.testResults.suites
-            .map(suite => outputSuite(suite, ''))
-            .join('\n\n')
-    })
-    return results
-}
-
-function testDuration() {
-    // const delta = moment.duration(moment() - new Date(startTime));
-    // const seconds = delta.seconds();
-    // const millis = delta.milliseconds();
-    const seconds = 0
-    const millis = 0
-    return `${seconds}.${millis} secs`
-  }
-
 // sometimes suites are spread over several files, hence we collect them before generating the report
-const allSuitesAndTests = {
-    allSuites: new Map(),
-    allTests: new Map()
-}
-
-let numPassedTests = 0
-let numFailedTests = 0
-let numSkippedTests = 0
+let allSuitesAndTests, numPassedTests, numFailedTests, numSkippedTests, totalDuration
 
 function collectSuitesAndTests(sessions) {
-    sessions.forEach( session => collectSuitesAndTestsHelper(session.testResults, allSuitesAndTests) )
+    sessions.forEach(session => collectSuitesAndTestsHelper(session.testResults, allSuitesAndTests))
 }
 
 function collectSuitesAndTestsHelper(testResults, suiteInfo) {
-    testResults.suites.forEach( suite => {
+    testResults.suites.forEach(suite => {
         // name: string, suites[], tests: []
         let childSuiteInfo = suiteInfo.allSuites.get(suite.name)
         if (childSuiteInfo === undefined) {
@@ -116,28 +52,32 @@ function collectSuitesAndTestsHelper(testResults, suiteInfo) {
         }
         collectSuitesAndTestsHelper(suite, childSuiteInfo)
     })
-    testResults.tests.forEach( test => {
+    testResults.tests.forEach(test => {
         // name: string, duration: number, passed: boolean
         suiteInfo.allTests.set(test.name, test)
     })
 }
 
 function reportAllSuitesAndTests(suiteInfo, indent = "") {
-    suiteInfo.allTests.forEach( (test, name) => {
+    suiteInfo.allTests.forEach((test, name) => {
+        if (test.duration !== undefined) {
+            totalDuration += test.duration
+        }
         let status = "failed"
         if (test.passed) {
             ++numPassedTests
             status = "passed"
-        } else
-        if (test.skipped) {
-            status = "skipped"
-            ++numSkippedTests
         } else {
-            ++numFailedTests
+            if (test.skipped) {
+                status = "skipped"
+                ++numSkippedTests
+            } else {
+                ++numFailedTests
+            }
         }
-        console.log(`${indent}${getStatus(status, name)}`)
+        console.log(`${indent}${getStatus(status, name)}${getDuration(test.duration)}`)
     })
-    suiteInfo.allSuites.forEach( (childSuiteInfo, name) => {
+    suiteInfo.allSuites.forEach((childSuiteInfo, name) => {
         console.log(`${indent}${colour.boldWhite}${name}${colour.reset}`)
         reportAllSuitesAndTests(childSuiteInfo, `${indent}  `)
     })
@@ -145,20 +85,70 @@ function reportAllSuitesAndTests(suiteInfo, indent = "") {
 
 function getStatus(status, title = "") {
     switch (status) {
-      case 'passed':
-        return `${colour.green}✔ ${title}${colour.reset}`;
-      case 'failed':
-        return `${colour.red}✖ ${title}${colour.reset}`;
-      case 'skipped':
-        return `${colour.grey}✖ ${title}${colour.reset}`;
+        case 'passed':
+            return `${colour.green}✔ ${title}${colour.reset}`
+        case 'failed':
+            return `${colour.red}✖ ${title}${colour.reset}`
+        case 'skipped':
+            return `${colour.grey}✖ ${title}${colour.reset}`
     }
-  }
+}
+
+function getDuration(duration) {
+    if (duration >= slow)
+      return ` ${colour.red}(${duration}ms)${colour.reset}`;
+    if (duration >= slow / 2)
+      return ` ${colour.yellow}(${duration}ms)${colour.reset}`;
+    return "";
+}
+
+function testDuration() {
+    const seconds = Math.floor(totalDuration / 1000);
+    const millis = totalDuration % 1000;
+    // const delta = moment.duration(moment() - new Date(startTime));
+    // const seconds = delta.seconds();
+    // const millis = delta.milliseconds();
+    // const seconds = 0
+    // const millis = 0
+    return `${seconds}.${millis} secs`
+}
 
 module.exports = function mochaStyleReporter({
     reportResults = true,
     reportProgress = true,
 } = {}) {
     return {
+        /**
+         * Called once when the test runner starts.
+         */
+        start({ config, sessions, testFiles, browserNames, startTime }) {
+            console.log()
+            console.log(`${colour.boldWhite}${colour.underline}START:${colour.reset}`)
+            console.log()
+        },
+
+        /**
+         * Called once when the test runner stops. This can be used to write a test
+         * report to disk for regular test runs.
+         */
+        stop({ sessions, testCoverage, focusedTestFile }) {
+            console.log()
+            console.log(`${colour.boldWhite}${colour.underline}STOP:${colour.reset}`)
+            console.log()
+        },
+
+        /**
+         * Called when a test run starts. Each file change in watch mode
+         * triggers a test run.
+         *
+         * @param testRun the test run
+         */
+        onTestRunStarted({ testRun }) {
+            console.log()
+            console.log(`${colour.boldWhite}${colour.underline}START:${colour.reset}`)
+            console.log()
+        },
+
         /**
          * Called when a test run is finished. Each file change in watch mode
          * triggers a test run. This can be used to report the end of a test run,
@@ -170,12 +160,19 @@ module.exports = function mochaStyleReporter({
             numPassedTests = 0
             numSkippedTests = 0
             numFailedTests = 0
+            allSuitesAndTests = {
+                allSuites: new Map(),
+                allTests: new Map()
+            }
+            totalDuration = 0
+
             collectSuitesAndTests(sessions)
+
+            console.log()
             reportAllSuitesAndTests(allSuitesAndTests)
 
             const numTotalTestSuites = allSuitesAndTests.allSuites.size
             const numTotalTests = numPassedTests + numSkippedTests + numFailedTests
-
             console.log()
             console.log(`${colour.green}Finished ${numTotalTests} tests in ${numTotalTestSuites} test suites in ${testDuration()}`)
             console.log()
@@ -205,6 +202,7 @@ module.exports = function mochaStyleReporter({
                 console.table(testCoverage.summary)
             }
         },
+
         /**
          * Called when results for a test file can be reported. This is called
          * when all browsers for a test file are finished, or when switching between
@@ -237,5 +235,29 @@ module.exports = function mochaStyleReporter({
             // logger.groupEnd()
             // console.log(testReport)
         },
+
+        /**
+         * Called when test progress should be rendered to the terminal. This is called
+         * any time there is a change in the test runner to display the latest status.
+         *
+         * This function should return the test report as a string. Previous results from this
+         * function are overwritten each time it is called, they are rendered "dynamically"
+         * to the terminal so that the progress bar is live updating.
+         */
+        // getTestProgress({
+        //     config,
+        //     sessions,
+        //     testFiles,
+        //     startTime,
+        //     testRun,
+        //     focusedTestFile,
+        //     testCoverage,
+        // }) {
+        //     if (!reportProgress) {
+        //         return
+        //     }
+
+        //     return `Current progress: 21%`
+        // },
     }
 }
