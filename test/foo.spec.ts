@@ -14,15 +14,13 @@ function a() {
 
 function b() {
     expect(true).to.be.false
-    // throw Error("damn!")
 }
 
 describe("java or mocha", function() {
     it("don't be chai", function() {
-        // expect(true).to.be.true
+        expect(true).to.be.true
     })
     it("javascript is not java", function() {
-        // expect(true).to.be.false
         a()
     })
     it("tape is slow", async function() {

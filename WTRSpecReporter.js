@@ -34,7 +34,7 @@ const colour = {
 
 // sometimes suites are spread over several files, hence we collect them before generating the report
 // FIXME: in case of duplicates only one will be seen without a warning that there were duplicates
-let allSuitesAndTests, numPassedTests, numFailedTests, numSkippedTests, totalDuration
+let allSuitesAndTests, numPassedTests, numFailedTests, numSkippedTests, startTime, endTime
 
 function collectSuitesAndTests(sessions) {
     sessions.forEach(session => {
@@ -122,10 +122,21 @@ function getDuration(duration) {
     return "";
 }
 
-// FIXME: use total run time instead of sum of test durations
-function testDuration() {
-    const seconds = Math.floor(totalDuration / 1000);
-    const millis = totalDuration % 1000;
+function start() {
+    startTime = performance.now()
+    console.log()
+    console.log(`${colour.boldWhite}${colour.underline}START:${colour.reset}`)
+    console.log()
+}
+
+function stop() {
+    endTime = performance.now()
+}
+
+function duration() {
+    const duration = Math.round(endTime - startTime)
+    const seconds = Math.floor(duration / 1000);
+    const millis = duration % 1000;
     return `${seconds}.${millis} secs`
 }
 
@@ -138,18 +149,14 @@ module.exports = function WTRSpecReporter({
          * Called once when the test runner starts.
          */
         start({ config, sessions, testFiles, browserNames, startTime }) {
-            console.log()
-            console.log(`${colour.boldWhite}${colour.underline}START:${colour.reset}`)
-            console.log()
+            start()
         },
 
         /**
          * Called when a test is re-run in watch mode.
          */
         onTestRunStarted({ testRun }) {
-            console.log()
-            console.log(`${colour.boldWhite}${colour.underline}START:${colour.reset}`)
-            console.log()
+            start()
         },
 
         /**
@@ -157,9 +164,6 @@ module.exports = function WTRSpecReporter({
          * report to disk for regular test runs.
          */
         stop({ sessions, testCoverage, focusedTestFile }) {
-            // console.log()
-            // console.log(`${colour.boldWhite}${colour.underline}STOP:${colour.reset}`)
-            // console.log()
         },
 
         /**
@@ -170,6 +174,8 @@ module.exports = function WTRSpecReporter({
          * @param testRun the test run
          */
         onTestRunFinished({ testRun, sessions, testCoverage, focusedTestFile }) {
+            stop()
+
             numPassedTests = 0
             numSkippedTests = 0
             numFailedTests = 0
@@ -186,11 +192,15 @@ module.exports = function WTRSpecReporter({
 
             const numTotalTestSuites = allSuitesAndTests.allSuites.size
             const numTotalTests = numPassedTests + numSkippedTests + numFailedTests
+            if (numPassedTests !== 0 || numSkippedTests !== 0 || numFailedTests !== 0) {
+                console.log()
+            }
+            console.log(`${colour.green}Finished ${numTotalTests} tests in ${numTotalTestSuites} test suites in ${duration()}`)
             console.log()
-            console.log(`${colour.green}Finished ${numTotalTests} tests in ${numTotalTestSuites} test suites in ${testDuration()}`)
-            console.log()
-            console.log(`${colour.boldWhite}${colour.underline}SUMMARY:${colour.reset}`)
-            console.log()
+            if (numPassedTests !== 0 || numSkippedTests !== 0 || numFailedTests !== 0) {
+                console.log(`${colour.boldWhite}${colour.underline}SUMMARY:${colour.reset}`)
+                console.log()
+            }
             if (numPassedTests !== 0) {
                 console.log(getStatus("passed", `${numPassedTests} tests completed`))
             }
@@ -200,7 +210,9 @@ module.exports = function WTRSpecReporter({
             if (numFailedTests !== 0) {
                 console.log(getStatus("failed", `${numFailedTests} tests failed`))
             }
-            console.log()
+            if (numPassedTests !== 0 || numSkippedTests !== 0 || numFailedTests !== 0) {
+                console.log()
+            }
 
             if (numFailedTests !== 0) {
                 console.log(`${colour.boldWhite}${colour.underline}FAILED TESTS:${colour.reset}`)
@@ -218,20 +230,27 @@ module.exports = function WTRSpecReporter({
                 console.log()
             }
 
-            // FIXME: this report could be nicer
+            let needHeader = true
             sessions.forEach(session => {
-                if (session.passed === false) {
-                    console.log(`${colour.red}${session.testFile}${colour.reset}`)
-                    // session.pass = false
-                    // 
-                    if (session.errors) {
-                        session.errors.forEach( e => console.log(e.message))
+                if (session.errors.length !== 0 || session.logs.length !== 0) {
+                    if (needHeader) {
+                        console.log(`${colour.boldWhite}${colour.underline}BROWSER LOGS:${colour.reset}`)
+                        console.log()
+                        needHeader = false
                     }
-                    // browser logs
+
+                    if (session.passed === false) {
+                        console.log(`  ${colour.red}∙ ${session.testFile}${colour.reset}`)
+                    } else {
+                        console.log(`  ∙ ${colour.red}${session.testFile}${colour.reset}`)
+                    }
+                    if (session.errors) {
+                        session.errors.forEach( e => console.log(`    ${colour.red}ERROR: ${e.message}${colour.reset}`))
+                    }
+
                     if (session.logs) {
-                        console.log(`BROWSER LOGS`)
                         session.logs.forEach( e => 
-                            e.forEach(line => console.log(line) )
+                            e.forEach(line => console.log(`    LOG  : ${line}`) )
                         )
                     }
                 }
@@ -253,22 +272,12 @@ module.exports = function WTRSpecReporter({
          * different session
          */
         async reportTestFileResults({ logger, sessionsForTestFile, testFile }) {
+            // FIXME: should report the FAILED TESTS here and print the nice report later
             if (!reportResults) {
                 console.log(`pending ${testFile}`)
                 return
             }
-
-            // console.log(logger)
-            // console.log(testFile)
-            // console.log(sessionsForTestFile)
-
-            // const testReport = await generateTestReport(testFile, sessionsForTestFile)
-
-            // logger.group()
             console.log(`ran ${testFile}`)
-            // console.log(testReport)
-            // logger.groupEnd()
-            // console.log(testReport)
         },
 
         /**
