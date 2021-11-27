@@ -1,4 +1,4 @@
-// import { expect } from '@esm-bundle/chai'
+import { expect } from '@esm-bundle/chai'
 // import { expect } from 'chai'
 
 function sleep(milliseconds: number = 500) {
@@ -14,8 +14,8 @@ function a() {
 }
 
 function b() {
-    // expect(true).to.be.false
-    throw Error("damn!")
+    expect(true).to.be.false
+    // throw Error("damn!")
 }
 
 describe("java or mocha", function() {

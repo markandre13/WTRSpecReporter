@@ -5,10 +5,10 @@ const specReporter = require('./spec-reporter.js');
 const mochaStyleReporter = require('./mochaStyleReporter.js');
 
 module.exports = {
-    plugins: [esbuildPlugin({ ts: true, target: 'esnext' })],
-//   plugins: [require('@snowpack/web-test-runner-plugin')()],
+    // plugins: [esbuildPlugin({ ts: true, target: 'esnext' })],
+  plugins: [require('@snowpack/web-test-runner-plugin')()],
   reporters: [
-    defaultReporter({ reportTestResults: false, reportTestProgress: true }),
+    // defaultReporter({ reportTestResults: true, reportTestProgress: true }),
     mochaStyleReporter(),
   ],
 };

@@ -39,7 +39,9 @@ const colour = {
 let allSuitesAndTests, numPassedTests, numFailedTests, numSkippedTests, totalDuration
 
 function collectSuitesAndTests(sessions) {
-    sessions.forEach(session => collectSuitesAndTestsHelper(session.testResults, allSuitesAndTests))
+    sessions.forEach(session => {
+        collectSuitesAndTestsHelper(session.testResults, allSuitesAndTests)
+    })
 }
 
 function collectSuitesAndTestsHelper(testResults, suiteInfo) {
@@ -221,6 +223,24 @@ module.exports = function mochaStyleReporter({
                 console.table(testCoverage.summary)
                 console.log()
             }
+
+            sessions.forEach(session => {
+                if (session.passed === false) {
+                    console.log(`${colour.red}${session.testFile}${colour.reset}`)
+                    // session.pass = false
+                    // 
+                    if (session.errors) {
+                        session.errors.forEach( e => console.log(e.message))
+                    }
+                    // browser logs
+                    if (session.logs) {
+                        console.log(`BROWSER LOGS`)
+                        session.logs.forEach( e => 
+                            e.forEach(line => console.log(line) )
+                        )
+                    }
+                }
+            })
         },
 
         /**
