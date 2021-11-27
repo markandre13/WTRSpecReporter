@@ -32,6 +32,8 @@ const colour = {
     BrightBlue: '\x1b[94m',
 }
 
+// FIXME: use total run time instead of sum of test durations
+
 // sometimes suites are spread over several files, hence we collect them before generating the report
 // WARNING: in case of duplicates only one will be seen without a warning that there were duplicates
 let allSuitesAndTests, numPassedTests, numFailedTests, numSkippedTests, totalDuration
@@ -91,8 +93,8 @@ function reportFailedTests(suiteInfo, path = "") {
             console.log(`    ${test.error.name}: ${test.error.message}`)
             console.log(`    ${colour.boldWhite}Expected:${colour.green} ${test.error.expected}${colour.reset}`)
             console.log(`    ${colour.boldWhite}Actual  :${colour.red} ${test.error.actual}${colour.reset}`)
-            const stack = test.error.stack.trim().replace(/\n/g, "\n    ")
-            console.log(`    ${stack}`)
+            const stack = test.error.stack.replace(/\n/g, "\n  ")
+            console.log(`  ${stack}`)
             console.log()
         }
     })
