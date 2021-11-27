@@ -1,5 +1,4 @@
 import { expect } from '@esm-bundle/chai'
-// import { expect } from 'chai'
 
 function sleep(milliseconds: number = 500) {
     return new Promise((resolve, reject) => {

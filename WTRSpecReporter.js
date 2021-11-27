@@ -32,10 +32,8 @@ const colour = {
     BrightBlue: '\x1b[94m',
 }
 
-// FIXME: use total run time instead of sum of test durations
-
 // sometimes suites are spread over several files, hence we collect them before generating the report
-// WARNING: in case of duplicates only one will be seen without a warning that there were duplicates
+// FIXME: in case of duplicates only one will be seen without a warning that there were duplicates
 let allSuitesAndTests, numPassedTests, numFailedTests, numSkippedTests, totalDuration
 
 function collectSuitesAndTests(sessions) {
@@ -124,14 +122,10 @@ function getDuration(duration) {
     return "";
 }
 
+// FIXME: use total run time instead of sum of test durations
 function testDuration() {
     const seconds = Math.floor(totalDuration / 1000);
     const millis = totalDuration % 1000;
-    // const delta = moment.duration(moment() - new Date(startTime));
-    // const seconds = delta.seconds();
-    // const millis = delta.milliseconds();
-    // const seconds = 0
-    // const millis = 0
     return `${seconds}.${millis} secs`
 }
 
@@ -224,6 +218,7 @@ module.exports = function WTRSpecReporter({
                 console.log()
             }
 
+            // FIXME: this report could be nicer
             sessions.forEach(session => {
                 if (session.passed === false) {
                     console.log(`${colour.red}${session.testFile}${colour.reset}`)
